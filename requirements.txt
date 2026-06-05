@@ -1,1 +1,3 @@
-pip install streamlit openai pillow
+streamlit
+openai
+pillow

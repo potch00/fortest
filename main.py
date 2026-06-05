@@ -139,7 +139,6 @@ if uploaded_file is not None:
                 add_items(extracted_data)
                 st.toast("모든 재료가 성공적으로 저장소에 추가되었습니다!")
 
----
 # 5. 저장 데이터 확인 (디버깅 및 추후 통합용 페이지 컴포넌트 예시)
 st.markdown("---")
 st.subheader("📦 현재 세션 저장소 상태 (st.session_state.items)")

@@ -5,9 +5,9 @@ from PIL import Image
 from openai import OpenAI
 import base64
 
-# 1. 세션 상태(Session State) 최상단 초기화
-if "items" not in st.session_state or st.session_state.items is None:
-    st.session_state.items = []
+# 1. [Tech Spec 준수] 세션 상태 초기화 (st.session_state.item 단수형 사용)
+if "item" not in st.session_state or st.session_state.item is None:
+    st.session_state.item = []
 
 # 2. 사이드바에 API 키 입력창 추가
 st.sidebar.title("🔐 설정 (Settings)")
@@ -17,7 +17,7 @@ user_openai_api_key = st.sidebar.text_input(
     help="OpenAI 홈페이지에서 발급받은 api 키(sk-...)를 입력해야 기능이 작동합니다."
 )
 
-# 3. 주요 함수 설계
+# 3. 주요 함수 설계 (Tech Spec 5번 반영)
 def extract_items_from_receipt(image_file, api_key):
     """
     사용자가 입력한 API 키를 사용하여 OpenAI gpt-4o 모델로 영수증을 분석합니다.
@@ -75,25 +75,26 @@ def extract_items_from_receipt(image_file, api_key):
 
 def add_items(extracted_data):
     """
-    추출된 데이터를 데이터 모델 형식에 맞추어 세션에 저장합니다.
+    [Tech Spec 준수] 추출된 데이터를 명시된 데이터 모델 형식에 맞추어 st.session_state.item에 저장합니다.
     """
-    if "items" not in st.session_state or not isinstance(st.session_state.items, list):
-        st.session_state.items = []
+    if "item" not in st.session_state or not isinstance(st.session_state.item, list):
+        st.session_state.item = []
         
     purchase_date = extracted_data.get("purchase_date", datetime.today().strftime('%Y-%m-%d'))
     new_items_names = extracted_data.get("items", [])
     
     for name in new_items_names:
+        # Tech Spec 4번에 명시된 구조 그대로 키값 생성
         item_model = {
             "name": name,
             "dDay": 0, 
             "purchase_date": purchase_date,
             "expire_date": "" 
         }
-        st.session_state.items.append(item_model)
+        st.session_state.item.append(item_model)
 
 
-# 4. UI 컴포넌트 구성
+# 4. UI 컴포넌트 구성 (Tech Spec 6번 메인 페이지 반영)
 st.title("Keep And Cook 🍳")
 st.subheader("영수증 재료 등록 (KAC-001)")
 st.write("2030 자취생을 위한 냉장고 유통기한 관리 서비스")
@@ -126,8 +127,8 @@ if uploaded_file is not None:
 
 # 5. 저장 데이터 확인 (디버깅용)
 st.markdown("---")
-st.subheader("📦 현재 세션 저장소 상태 (st.session_state.items)")
-if st.session_state.items:
-    st.json(st.session_state.items)
+st.subheader("📦 현재 세션 저장소 상태 (st.session_state.item)")
+if st.session_state.item:
+    st.json(st.session_state.item)
 else:
     st.info("아직 저장된 재료가 없습니다. 영수증을 업로드하여 재료를 추가해보세요.")

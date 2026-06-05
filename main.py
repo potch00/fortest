@@ -22,11 +22,18 @@ def extract_items_from_receipt(image_file, api_key):
     """
     사용자가 입력한 API 키를 사용하여 OpenAI gpt-4o 모델로 영수증을 분석합니다.
     """
-    # 2. 사용자가 입력한 키로 OpenAI 클라이언트 인스턴스 생성
     client = OpenAI(api_key=api_key)
     
+    # 1. 파일의 처음으로 포인터 이동 (안전한 읽기를 위해)
+    image_file.seek(0)
     bytes_data = image_file.read()
+    
+    # 2. 오류 없는 표준 base64 인코딩 방식 적용 
+    import base64
     base64_image = base64.b64encode(bytes_data).decode('utf-8')
+    
+    # 3. 이미지 확장자 파악 (jpg, png 등 대응)
+    file_type = image_file.type if hasattr(image_file, 'type') else "image/jpeg"
     
     prompt = """
     당신은 영수증에서 구매 내역을 추출하는 유용한 비서입니다.
@@ -54,7 +61,8 @@ def extract_items_from_receipt(image_file, api_key):
                         {"type": "text", "text": prompt},
                         {
                             "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+                            # data:{file_type};base64,{base64_image} 형태로 규격을 정확히 맞춰 찌릅니다.
+                            "image_url": {"url": f"data:{file_type};base64,{base64_image}"}
                         }
                     ]
                 }
@@ -68,7 +76,7 @@ def extract_items_from_receipt(image_file, api_key):
     except Exception as e:
         st.error(f"AI 인식 중 오류가 발생했습니다: {e}")
         return None
-
+        
 def add_items(extracted_data):
     purchase_date = extracted_data.get("purchase_date", datetime.today().strftime('%Y-%m-%d'))
     new_items_names = extracted_data.get("items", [])

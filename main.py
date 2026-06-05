@@ -9,7 +9,7 @@ import base64
 if "item" not in st.session_state or st.session_state.item is None:
     st.session_state.item = []
 
-# AI가 1차 추출한 임시 데이터를 보관할 세션 상태 추가
+# [중요 수정] AI가 1차 추출한 임시 데이터를 유지하기 위한 세션 상태
 if "temp_extracted" not in st.session_state:
     st.session_state.temp_extracted = None
 
@@ -25,8 +25,8 @@ user_openai_api_key = st.sidebar.text_input(
 def extract_items_from_receipt(image_file, api_key):
     """
     OpenAI gpt-4o 모델로 영수증을 분석합니다.
-    [개선] 끊기거나 축약된 상품명을 문맥상 온전한 식재료명으로 추론하도록 프롬프트 강화.
-    [개선] dDay나 유통기한 추정 없이 오직 상품명과 구매일만 정밀 추출.
+    끊기거나 축약된 상품명을 문맥상 온전한 식재료명으로 추론하도록 프롬프트 강화.
+    오직 상품명과 구매일만 정밀 추출.
     """
     client = OpenAI(api_key=api_key)
     
@@ -90,7 +90,7 @@ def add_items(final_date, final_items_list):
         st.session_state.item = []
         
     for name in final_items_list:
-        if name.strip(): # 빈 칸이 아닐 때만 저장
+        if name.strip():
             item_model = {
                 "name": name.strip(),
                 "dDay": 0, 
@@ -118,17 +118,46 @@ if uploaded_file is not None:
             with st.spinner("AI가 영수증에서 재료를 추론하고 구매일을 추출하고 있습니다..."):
                 extracted_data = extract_items_from_receipt(uploaded_file, user_openai_api_key)
                 if extracted_data:
-                    # 추출 결과를 임시 세션에 저장하여 화면에 입력창으로 띄울 수 있도록 함
+                    # [핵심 수정] 추출 결과를 세션 상태에 확실하게 저장
                     st.session_state.temp_extracted = extracted_data
-                    st.success("AI 분석 완료! 아래에서 내용을 확인하고 수정해 주세요.")
+                    # 화면을 강제로 한 번 새로고침하여 하단의 수정 UI가 즉시 그려지도록 유도
+                    st.rerun()
 
-# --- ✍️ [개선] 사용자가 직접 수정할 수 있는 UI 영역 ---
+# --- ✍️ [개선 및 버그 수정] 사용자가 직접 수정할 수 있는 UI 영역 ---
+# 이제 버튼 바깥에 독립적으로 존재하므로, 화면이 새로고침되어도 데이터가 있다면 무조건 화면에 유지됩니다.
 if st.session_state.temp_extracted is not None:
+    st.markdown("---")
     st.markdown("### ✏️ AI 추출 결과 확인 및 수정")
-    st.write("틀린 부분이 있다면 직접 수정하신 후 하단의 [최종 냉장고에 저장] 버튼을 눌러주세요.")
+    st.info("틀린 부분이 있다면 직접 수정하신 후 하단의 [최종 냉장고에 저장] 버튼을 눌러주세요.")
     
     # 1. 구매일 수정 입력창
     temp_date = st.session_state.temp_extracted.get("purchase_date", datetime.today().strftime('%Y-%m-%d'))
     edited_date = st.text_input("🗓️ 구매일 (YYYY-MM-DD)", value=temp_date)
     
-    # 2. 재료 목록 수정 입력창 (쉼표로 구분하여 수정할 수 있게
+    # 2. 재료 목록 수정 입력창 (쉼표로 구분하여 수정할 수 있게 텍스트로 변환)
+    temp_items = st.session_state.temp_extracted.get("items", [])
+    temp_items_str = ", ".join(temp_items)
+    edited_items_str = st.text_area("🛒 추출된 재료 (쉼표로 구분하여 수정 가능)", value=temp_items_str)
+    
+    # 3. 최종 저장 버튼
+    if st.button("💾 최종 냉장고에 저장"):
+        # 사용자가 수정한 쉼표 기반 문자열을 다시 리스트로 변환
+        edited_items_list = [item.strip() for item in edited_items_str.split(",") if item.strip()]
+        
+        # 최종 데이터 적재
+        add_items(edited_date, edited_items_list)
+        
+        st.toast("선택하신 재료가 성공적으로 냉장고 저장소에 저장되었습니다!")
+        
+        # 저장 완료 후 임시 세션 비우기
+        st.session_state.temp_extracted = None
+        # 새로고침하여 상단 화면 및 하단 저장소 상태 업데이트
+        st.rerun()
+
+# 5. 저장 데이터 확인 (디버깅용)
+st.markdown("---")
+st.subheader("📦 현재 냉장고 저장소 상태 (st.session_state.item)")
+if st.session_state.item:
+    st.json(st.session_state.item)
+else:
+    st.info("아직 저장된 재료가 없습니다. 영수증을 업로드하여 재료를 추가해보세요.")

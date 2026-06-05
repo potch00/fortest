@@ -5,13 +5,11 @@ from PIL import Image
 from openai import OpenAI
 import base64
 
-# ===================================================================
-# 🛡️ [핵심 수정] 1. 세션 상태(Session State) 최상단 초기화 (Tech Spec 7번 반영)
-# ===================================================================
+# 1. 세션 상태(Session State) 최상단 초기화
 if "items" not in st.session_state or st.session_state.items is None:
-    st.session_state.items = [] [cite: 1, 2]
+    st.session_state.items = []
 
-# --- 🔑 2. 사이드바에 API 키 입력창 추가 ---
+# 2. 사이드바에 API 키 입력창 추가
 st.sidebar.title("🔐 설정 (Settings)")
 user_openai_api_key = st.sidebar.text_input(
     "OpenAI API Key를 입력하세요", 
@@ -19,16 +17,14 @@ user_openai_api_key = st.sidebar.text_input(
     help="OpenAI 홈페이지에서 발급받은 api 키(sk-...)를 입력해야 기능이 작동합니다."
 )
 
-# ===================================================================
-# 3. 주요 함수 설계 (Tech Spec 5번 반영)
-# ===================================================================
+# 3. 주요 함수 설계
 def extract_items_from_receipt(image_file, api_key):
     """
     사용자가 입력한 API 키를 사용하여 OpenAI gpt-4o 모델로 영수증을 분석합니다.
     """
     client = OpenAI(api_key=api_key)
     
-    # 파일의 처음으로 포인터 이동 (안전한 읽기를 위해)
+    # 파일의 처음으로 포인터 이동
     image_file.seek(0)
     bytes_data = image_file.read()
     
@@ -79,35 +75,31 @@ def extract_items_from_receipt(image_file, api_key):
 
 def add_items(extracted_data):
     """
-    추출된 데이터를 Tech Spec 4번의 데이터 모델 형식에 맞추어 세션에 저장합니다.
+    추출된 데이터를 데이터 모델 형식에 맞추어 세션에 저장합니다.
     """
-    # [방어 코드] 혹시라도 세션이 날아갔을 경우를 대비해 재확인
     if "items" not in st.session_state or not isinstance(st.session_state.items, list):
-        st.session_state.items = [] [cite: 1, 2]
+        st.session_state.items = []
         
-    purchase_date = extracted_data.get("purchase_date", datetime.today().strftime('%Y-%m-%d')) [cite: 1, 2]
+    purchase_date = extracted_data.get("purchase_date", datetime.today().strftime('%Y-%m-%d'))
     new_items_names = extracted_data.get("items", [])
     
     for name in new_items_names:
-        # Tech Spec 4. 데이터 모델 구조 정의
         item_model = {
-            "name": name, [cite: 1, 2]
-            "dDay": 0,  [cite: 1, 2]
-            "purchase_date": purchase_date, [cite: 1, 2]
-            "expire_date": ""  [cite: 1, 2]
+            "name": name,
+            "dDay": 0, 
+            "purchase_date": purchase_date,
+            "expire_date": "" 
         }
-        st.session_state.items.append(item_model) [cite: 1, 2]
+        st.session_state.items.append(item_model)
 
 
-# ===================================================================
-# 4. UI 컴포넌트 구성 (Tech Spec 6번 메인 페이지 반영)
-# ===================================================================
-st.title("Keep And Cook 🍳") [cite: 1, 2]
-st.subheader("영수증 재료 등록 (KAC-001)") [cite: 3]
-st.write("2030 자취생을 위한 냉장고 유통기한 관리 서비스") [cite: 3]
+# 4. UI 컴포넌트 구성
+st.title("Keep And Cook 🍳")
+st.subheader("영수증 재료 등록 (KAC-001)")
+st.write("2030 자취생을 위한 냉장고 유통기한 관리 서비스")
 
 # 파일 업로더 생성
-uploaded_file = st.file_uploader("영수증 이미지를 첨부해주세요.", type=["jpg", "png"]) [cite: 1, 2]
+uploaded_file = st.file_uploader("영수증 이미지를 첨부해주세요.", type=["jpg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
@@ -132,12 +124,10 @@ if uploaded_file is not None:
                     add_items(extracted_data)
                     st.toast("모든 재료가 성공적으로 저장소에 추가되었습니다!")
 
-# ===================================================================
-# 5. 저장 데이터 확인 (디버깅용 컴포넌트)
-# ===================================================================
+# 5. 저장 데이터 확인 (디버깅용)
 st.markdown("---")
 st.subheader("📦 현재 세션 저장소 상태 (st.session_state.items)")
-if st.session_state.items: [cite: 1, 2]
-    st.json(st.session_state.items) [cite: 1, 2]
+if st.session_state.items:
+    st.json(st.session_state.items)
 else:
     st.info("아직 저장된 재료가 없습니다. 영수증을 업로드하여 재료를 추가해보세요.")

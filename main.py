@@ -21,7 +21,7 @@ user_openai_api_key = st.sidebar.text_input(
     help="OpenAI 홈페이지에서 발급받은 api 키(sk-...)를 입력해야 기능이 작동합니다."
 )
 
-# 3. 주요 함수 설계
+# 3. 주요 함수 설계 (OCR 단계와 추론 단계를 분리)
 
 def run_ocr_step(image_file, client):
     """
